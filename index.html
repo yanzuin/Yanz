@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Catch the Stars — HTML Game</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: radial-gradient(circle at center, #0d1b2a 0%, #000 100%);
+      color: #fff;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+    canvas {
+      background: linear-gradient(180deg, #091324, #0c2038);
+      border: 2px solid #3af;
+      border-radius: 8px;
+      display: block;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    #btn {
+      margin-top: 10px;
+      padding: 6px 14px;
+      background: #3af;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div>Score: <span id="score">0</span></div>
+    <button id="btn">Start Game</button>
+  </div>
+  <canvas id="game" width="480" height="640"></canvas>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const btn = document.getElementById('btn');
+
+    let player, stars, meteors, score, running, keys;
+
+    function resetGame() {
+      player = { x: canvas.width / 2, y: canvas.height - 40, w: 60, h: 10, speed: 6 };
+      stars = [];
+      meteors = [];
+      score = 0;
+      running = true;
+      keys = {};
+    }
+
+    function spawnItem() {
+      if (Math.random() < 0.7) {
+        stars.push({ x: Math.random() * canvas.width, y: -10, r: 6, vy: 3 + Math.random() * 2 });
+      } else {
+        meteors.push({ x: Math.random() * canvas.width, y: -10, r: 10, vy: 4 + Math.random() * 3 });
+      }
+    }
+
+    function update() {
+      if (!running) return;
+
+      // movement
+      if (keys['ArrowLeft']) player.x -= player.speed;
+      if (keys['ArrowRight']) player.x += player.speed;
+      player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+
+      // spawn
+      if (Math.random() < 0.05) spawnItem();
+
+      // update stars
+      stars.forEach(s => s.y += s.vy);
+      meteors.forEach(m => m.y += m.vy);
+
+      // collisions
+      stars = stars.filter(s => {
+        if (s.y > canvas.height) return false;
+        if (s.y + s.r > player.y && s.x > player.x && s.x < player.x + player.w) {
+          score++;
+          return false;
+        }
+        return true;
+      });
+
+      for (const m of meteors) {
+        if (m.y + m.r > player.y && m.x > player.x && m.x < player.x + player.w) {
+          running = false;
+          btn.textContent = 'Restart';
+        }
+      }
+
+      scoreEl.textContent = score;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // player
+      ctx.fillStyle = '#3af';
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+
+      // stars
+      ctx.fillStyle = '#ff0';
+      for (const s of stars) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // meteors
+      ctx.fillStyle = '#f33';
+      for (const m of meteors) {
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // game over text
+      if (!running && score > 0) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // events
+    document.addEventListener('keydown', e => keys[e.key] = true);
+    document.addEventListener('keyup', e => keys[e.key] = false);
+
+    btn.addEventListener('click', () => {
+      resetGame();
+      btn.textContent = 'Playing...';
+    });
+
+    // start animation loop
+    resetGame();
+    running = false;
+    loop();
+  </script>
+</body>
+</html>
